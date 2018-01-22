@@ -13,6 +13,22 @@ function title {
     echo -e ${LGREEN}$1${CLEAR}
 }
 
+function error {
+    RED='\033[0;31m'
+    CLEAR='\033[0m'
+
+    echo -e ${RED}$1${CLEAR} >&2
+}
+
+#############################################
+# Pull the latest base image
+if [ $AZURECLIDEV_ACR_SP_USERNAME ] && [ $AZURECLIDEV_ACR_SP_PASSWORD ]; then
+    title 'Login docker registry'
+    docker login azureclidev.azurecr.io -u $AZURECLIDEV_ACR_SP_USERNAME -p $AZURECLIDEV_ACR_SP_PASSWORD
+fi
+
+docker pull azureclidev.azurecr.io/azurecli-a01-droid:python3.6-latest || (error 'Please login the azureclidev.azurecr.io docker registry first.'; exit 1)
+
 #############################################
 # Clean up artifacts
 title 'Remove artifacts folder'
@@ -40,13 +56,8 @@ version=`cat artifacts/version`
 image_name=azureclidev.azurecr.io/azurecli-test-$image_owner:python3.6-$version
 echo 'Image name: $image_name'
 
-title 'Login docker registry'
-if [ $AZURECLIDEV_ACR_SP_USERNAME ] && [ $AZURECLIDEV_ACR_SP_PASSWORD ]; then
-    docker login azureclidev.azurecr.io -u $AZURECLIDEV_ACR_SP_USERNAME -p $AZURECLIDEV_ACR_SP_PASSWORD
-fi
-
 title 'Build docker image'
-docker build --pull -t $image_name -f artifacts/Dockerfile.py36 artifacts
+docker build -t $image_name -f artifacts/Dockerfile.py36 artifacts
 
 title 'Push docker image'
 if [ "$1" == "push" ] || [ "$TRAVIS" == "true" ]; then
@@ -54,3 +65,5 @@ if [ "$1" == "push" ] || [ "$TRAVIS" == "true" ]; then
 else
     echo "Skip"
 fi
+
+echo $image_name
